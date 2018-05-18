@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>聊天室</title>
+    <link rel="stylesheet" href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css"/>
+    <script src="http://cdn.bootcss.com/sockjs-client/1.1.1/sockjs.min.js"></script>
+    <script src="http://cdn.bootcss.com/stomp.js/2.3.3/stomp.js"></script>
+    <script src="http://cdn.bootcss.com/jquery/3.1.1/jquery.min.js"></script>
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        // var socket = new SockJS("/endpointWisely");
+        // var stompClient = Stomp.over(socket);
+
+        // $(document).ready(function () {
+        //
+        //     var loginUsername = $("#loginUsername").text();
+        //     alert("username = " + loginUsername);
+        //
+        // });
+
+        // 链接Web Socket的服务端。
+        // stompClient.connect({}, function (frame) {
+        //     stompClient.subscribe("/topic/getResponse", function (response) {
+        //         //订阅/topic/getResponse 目标发送的消息。这个是在控制器的@SendTo中定义的
+        //         alert(JSON.parse(response.body).message);
+        //     });
+        //
+        //     stompClient.subscribe("/user/" + "chat2" +"/queue/notifications", function (data) {
+        //         alert(JSON.parse(data.body).message);
+        //     });
+        // });
+
+        var stompClient = null;
+
+        $(document).ready(function () {
+            //alert("active = " + $(".nav-tabs li.active").text());
+            connect();
+        });
+
+        function connect() {
+            var socket = new SockJS("/endpointWisely");
+            //var socket = new SockJS("ws://140.143.54.177/chat/endpointWisely");
+            stompClient = Stomp.over(socket);
+
+            var loginUsername = $("#loginUsername").text();
+            alert("username = " + loginUsername);
+
+            // 链接Web Socket的服务端。
+            stompClient.connect({}, function (frame) {
+                stompClient.subscribe("/topic/getResponse", function (response) {
+                    //订阅/topic/getResponse 目标发送的消息。这个是在控制器的@SendTo中定义的
+                    alert(JSON.parse(response.body).message);
+                });
+
+                stompClient.subscribe("/user/" + loginUsername +"/queue/notifications", function (data) {
+                    //alert(JSON.parse(data.body).message);
+                    //alert(JSON.parse(data.body).fromUser);
+                    //获取消息发出方
+                    var fromUser = JSON.parse(data.body).fromUser;
+                    //获取接收的消息
+                    var message = JSON.parse(data.body).message;
+                    $("#" +fromUser + " div").append('<p style="color: deeppink; font-size: 20px;">' + fromUser + '：<span style="color: black; font-size: 20px;">' + message + '</span></p>');
+                });
+            });
+        }
+
+        function sendMessage() {
+            var inputMessage = document.getElementById("input_message").value;
+            stompClient.send("/welcome", {}, JSON.stringify({"name":inputMessage}));
+            $("input[id='input_message']").val("").focus();  //清空输入框并获取焦点
+        }
+
+        function sendMessageToUser() {
+            var inputMessageToUer = document.getElementById("input_message_user").value;
+            //var player = document.getElementById("input_player").value;
+            var player = $(".nav-tabs li.active").text();
+            var loginUsername = $("#loginUsername").text();
+            stompClient.send("/chat", {}, JSON.stringify({"name": inputMessageToUer, "player": player, "myself": loginUsername}));
+            $("input[id='input_message_user']").val("").focus();  //清空输入框并获取焦点
+
+            //在前端页面显示对话
+            //TODO 获取当前时间
+            var loginUsername = $("#loginUsername").text();  //获取自己的名字
+            // style='color: chartreuse; font-size: 20px;'
+            $("#" + player + " div").append('<p style="color: forestgreen; font-size: 20px;">' + loginUsername + '：<span style="color: black; font-size: 20px;">' + inputMessageToUer + '</span></p>');
+        }
+
+
+        $('#myTabs a').click(function (e) {
+            e.preventDefault();
+            $(this).tab('show');
+        });
+        $('#myTabs a[href="#profile"]').tab('show') // Select tab by name
+        $('#myTabs a:first').tab('show') // Select first tab
+        $('#myTabs a:last').tab('show') // Select last tab
+        $('#myTabs li:eq(2) a').tab('show') // Select third tab (0-indexed)
+
+        //回车键提交事件
+        $(document).keyup(function (event) {
+            if (event.keyCode == 13) {
+                //判断输入框是否有焦点
+                var isFocusAll = $('#input_message').is(":focus");
+                var isFocusUser = $('#input_message_user').is(":focus");
+                if (isFocusAll == true) {
+                    $('#sendAll').click();
+                }
+                if (isFocusUser == true) {
+                    $('#sendUser').click();
+                }
+            }
+        });
+
+
+    </script>
+</head>
+<body>  
+    <span style="font-family: 幼圆; font-size: 20px; color: coral;">已经连接上WebSocket！当前用户：<span th:text="${player}" id="loginUsername"></span></span>
+    <div>
+
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#root" aria-controls="home" role="tab" data-toggle="tab">root</a></li>
+            <li role="presentation"><a href="#admin" aria-controls="profile" role="tab" data-toggle="tab">admin</a></li>
+            <li role="presentation"><a href="#xq" aria-controls="messages" role="tab" data-toggle="tab">xq</a></li>
+            <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">设置</a></li>
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="root">
+                <div style="border: 1px solid cornflowerblue; width: 1000px; height: 500px;">
+
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="admin">
+                <div style="border: 1px solid cornflowerblue; width: 1000px; height: 500px;">
+
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="xq">
+                <div style="border: 1px solid cornflowerblue; width: 1000px; height: 500px;">
+
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="settings"><p>设置！</p></div>
+        </div>
+
+    </div>
+    <div>
+        群发信息：<input type="text" id="input_message"/>
+        <input type="button" id="sendAll" onclick="sendMessage()" value="发送"/><br/>
+        单点信息：<input type="text" id="input_message_user"/>
+        <input type="button" id="sendUser" onclick="sendMessageToUser()" value="发送"/><br/>
+    </div>
+</body>
+</html>
